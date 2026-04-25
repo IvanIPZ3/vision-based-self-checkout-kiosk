@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;700;800&family=Manrope:wght@500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply m-0 h-full min-h-screen w-full;
+  }
+
+  body {
+    @apply overflow-hidden bg-kiosk-bg font-body text-slate-100 antialiased;
+    background-image:
+      radial-gradient(circle at 14% 20%, rgba(45, 226, 199, 0.14), transparent 38%),
+      radial-gradient(circle at 86% 10%, rgba(0, 163, 255, 0.22), transparent 34%),
+      linear-gradient(160deg, #07101c 0%, #050a12 48%, #040910 100%);
+  }
+}
+
+@layer components {
+  .kiosk-shell {
+    @apply relative overflow-hidden rounded-[2rem] border border-slate-700/70 bg-slate-950/40;
+  }
+
+  .kiosk-shell::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent);
+  }
+
+  .panel {
+    @apply rounded-3xl border border-slate-700/70 bg-kiosk-panel/90 shadow-panel backdrop-blur;
+  }
+
+  .panel-alt {
+    @apply rounded-2xl border border-slate-700/70 bg-kiosk-panelAlt/95;
+  }
+
+  .camera-shell {
+    @apply relative overflow-hidden rounded-[1.75rem] border border-sky-500/60 bg-slate-950;
+    box-shadow: inset 0 0 0 2px rgba(0, 163, 255, 0.25), 0 28px 48px rgba(0, 0, 0, 0.45);
+  }
+
+  .camera-shell::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0;
+    background: radial-gradient(circle at 50% 45%, rgba(45, 226, 199, 0.25), transparent 62%);
+  }
+
+  .scan-line {
+    @apply pointer-events-none absolute left-8 right-8 top-8 h-1 rounded-full bg-kiosk-accent/80;
+    box-shadow: 0 0 16px rgba(45, 226, 199, 0.85);
+    animation: scanMove 2.4s linear infinite;
+  }
+
+  .platform-shell {
+    @apply relative overflow-hidden rounded-[1.75rem] border border-sky-500/60 bg-slate-950;
+    box-shadow: inset 0 0 0 2px rgba(0, 163, 255, 0.25), 0 28px 48px rgba(0, 0, 0, 0.45);
+  }
+
+  .platform-shell::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0;
+    background:
+      radial-gradient(circle at 50% 10%, rgba(0, 163, 255, 0.2), transparent 30%),
+      linear-gradient(180deg, rgba(45, 226, 199, 0.1), transparent 45%);
+  }
+
+  .platform-scan-overlay {
+    @apply pointer-events-none absolute inset-0;
+    background: linear-gradient(180deg, rgba(45, 226, 199, 0) 0%, rgba(45, 226, 199, 0.18) 50%, rgba(45, 226, 199, 0) 100%);
+    animation: platformPulse 1.4s ease-in-out infinite;
+  }
+
+  .camera-video {
+    @apply absolute inset-0 h-full w-full object-cover transition-opacity duration-500;
+  }
+
+  .camera-fallback {
+    @apply absolute inset-0 flex items-center justify-center bg-slate-950/85 p-6;
+  }
+
+  .camera-fallback-card {
+    @apply rounded-2xl border border-slate-700 bg-slate-950/85 px-6 py-5 text-center shadow-panel backdrop-blur;
+  }
+
+  .platform-caption {
+    @apply absolute bottom-6 left-6 right-6 rounded-2xl border border-slate-700/80 bg-slate-950/60 px-6 py-5 text-center backdrop-blur;
+  }
+
+  .camera-corner {
+    @apply absolute h-12 w-12 border-kiosk-accent;
+  }
+
+  .camera-corner-tl {
+    @apply left-5 top-5 border-l-[4px] border-t-[4px];
+  }
+
+  .camera-corner-tr {
+    @apply right-5 top-5 border-r-[4px] border-t-[4px];
+  }
+
+  .camera-corner-bl {
+    @apply bottom-5 left-5 border-b-[4px] border-l-[4px];
+  }
+
+  .camera-corner-br {
+    @apply bottom-5 right-5 border-b-[4px] border-r-[4px];
+  }
+
+  .status-pulse {
+    animation: statusPulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes scanMove {
+  0% {
+    transform: translateY(0);
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(280px);
+    opacity: 0.25;
+  }
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes platformPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
