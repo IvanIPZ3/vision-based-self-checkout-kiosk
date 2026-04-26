@@ -1,9 +1,15 @@
-from collections.abc import Iterator
 from io import BytesIO
-from itertools import cycle
 
 from PIL import Image, UnidentifiedImageError
 
+from backend.app.core.opencv_recognition import opencv_recognition_engine
+from backend.app.repositories.objects_repository import objects_repository
+from backend.app.repositories.reference_images_repository import reference_images_repository
+from backend.app.repositories.recognition_runs_repository import (
+    RecognitionRunItemPayload,
+    RecognitionRunPayload,
+    recognition_runs_repository,
+)
 from backend.app.schemas.prediction import (
     PredictionDebugInfo,
     PredictionItem,
@@ -16,36 +22,8 @@ class ImageValidationError(ValueError):
 
 
 class RecognitionService:
-    def __init__(self) -> None:
-        self._mock_predictions: Iterator[dict[str, object]] = cycle(
-            [
-                {
-                    "detected": True,
-                    "message": "Backend received image successfully",
-                    "items": [
-                        {"label": "milk", "quantity": 1, "confidence": 0.97},
-                        {"label": "bread", "quantity": 1, "confidence": 0.94},
-                        {"label": "apples", "quantity": 2, "confidence": 0.91},
-                    ],
-                    "unresolvedCount": 0,
-                },
-                {
-                    "detected": True,
-                    "message": "Backend received image successfully",
-                    "items": [
-                        {"label": "milk", "quantity": 1, "confidence": 0.93},
-                        {"label": "apples", "quantity": 1, "confidence": 0.88},
-                    ],
-                    "unresolvedCount": 1,
-                },
-                {
-                    "detected": False,
-                    "message": "Backend received image successfully",
-                    "items": [],
-                    "unresolvedCount": 0,
-                },
-            ]
-        )
+    algorithm_name = opencv_recognition_engine.algorithm_name
+    algorithm_version = opencv_recognition_engine.algorithm_version
 
     def predict(
         self,
@@ -55,27 +33,85 @@ class RecognitionService:
         content_type: str | None,
     ) -> PredictionResponse:
         image_info = self._read_image_info(image_bytes)
-        mock_prediction = next(self._mock_predictions)
-        prediction_items = [
-            PredictionItem(**item) for item in mock_prediction["items"]  # type: ignore[index]
-        ]
+        reference_images = reference_images_repository.list_active()
+        recognition_result = opencv_recognition_engine.recognize(
+            image_bytes=image_bytes,
+            reference_images=reference_images,
+        )
+        requested_labels = [item.label for item in recognition_result.detected_items]
+        objects_by_label = objects_repository.get_active_by_labels(requested_labels)
+
+        prediction_items: list[PredictionItem] = []
+        run_items: list[RecognitionRunItemPayload] = []
+
+        for item in recognition_result.detected_items:
+            label = item.label
+            quantity = item.quantity
+            confidence = item.confidence
+            good_matches = item.good_matches
+            inliers = item.inliers
+
+            catalog_object = objects_by_label.get(label)
+            if catalog_object is None:
+                continue
+
+            prediction_items.append(
+                PredictionItem(
+                    objectId=catalog_object.id,
+                    label=catalog_object.label,
+                    name=catalog_object.name,
+                    price=catalog_object.price,
+                    quantity=quantity,
+                    confidence=confidence,
+                )
+            )
+            run_items.append(
+                RecognitionRunItemPayload(
+                    object_id=catalog_object.id,
+                    predicted_label=catalog_object.label,
+                    quantity=quantity,
+                    confidence=confidence,
+                    good_matches=good_matches,
+                    inliers=inliers,
+                )
+            )
+
+        unresolved_count = recognition_result.unresolved_count
 
         primary_item = prediction_items[0] if prediction_items else None
+        run_id = recognition_runs_repository.create_run(
+            run=RecognitionRunPayload(
+                request_filename=filename,
+                request_content_type=content_type,
+                image_width=image_info["width"],
+                image_height=image_info["height"],
+                image_format=image_info["imageFormat"],
+                detected_any=bool(prediction_items),
+                unresolved_count=unresolved_count,
+                message=recognition_result.message,
+                algorithm_name=self.algorithm_name,
+                algorithm_version=self.algorithm_version,
+            ),
+            items=run_items,
+        )
 
         return PredictionResponse(
-            detected=bool(mock_prediction["detected"]),
+            detected=bool(prediction_items),
             label=primary_item.label if primary_item else None,
             confidence=primary_item.confidence if primary_item else 0.0,
-            message=str(mock_prediction["message"]),
+            message=recognition_result.message,
             items=prediction_items,
-            unresolvedCount=int(mock_prediction["unresolvedCount"]),
+            unresolvedCount=unresolved_count,
             debug=PredictionDebugInfo(
+                runId=run_id,
                 filename=filename,
                 contentType=content_type,
                 sizeBytes=len(image_bytes),
                 width=image_info["width"],
                 height=image_info["height"],
                 imageFormat=image_info["imageFormat"],
+                algorithmName=self.algorithm_name,
+                algorithmVersion=self.algorithm_version,
             ),
         )
 
@@ -85,9 +121,9 @@ class RecognitionService:
                 width, height = image.size
                 image_format = image.format
         except UnidentifiedImageError as error:
-            raise ImageValidationError("Uploaded file is not a valid image.") from error
+            raise ImageValidationError("Завантажений файл не є коректним зображенням.") from error
         except OSError as error:
-            raise ImageValidationError("Uploaded image could not be decoded.") from error
+            raise ImageValidationError("Не вдалося декодувати зображення.") from error
 
         return {
             "width": width,

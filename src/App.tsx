@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { mockProducts } from './data/mockProducts';
 import { PaymentScreen } from './screens/PaymentScreen';
 import { ScanScreen } from './screens/ScanScreen';
 import { StaffHelpScreen } from './screens/StaffHelpScreen';
@@ -19,8 +18,6 @@ import type {
 import { captureVideoFrame } from './utils/captureVideoFrame';
 
 type NonHelpScreen = Exclude<Screen, 'staffHelp'>;
-
-const productMap = new Map(mockProducts.map((product) => [product.id, product]));
 
 const clearTimeoutIfPresent = (timeoutRef: MutableRefObject<number | null>) => {
   if (timeoutRef.current) {
@@ -97,45 +94,26 @@ const App = () => {
     setReceiptChoice(null);
   };
 
-  const normalizePredictionItems = (prediction: PredictionResponse): PredictionItem[] => {
-    if (prediction.items.length > 0) {
-      return prediction.items;
-    }
-
-    if (prediction.label) {
-      return [
-        {
-          label: prediction.label,
-          quantity: 1,
-          confidence: prediction.confidence,
-        },
-      ];
-    }
-
-    return [];
-  };
+  const normalizePredictionItems = (prediction: PredictionResponse): PredictionItem[] => prediction.items;
 
   const mergeRecognizedItemsIntoCart = (predictionItems: PredictionItem[]) => {
     setCartItems((previousItems) => {
       const nextItems = previousItems.map((item) => ({ ...item }));
 
       predictionItems.forEach((predictionItem) => {
-        const product = productMap.get(predictionItem.label);
-        if (!product) {
-          return;
-        }
-
-        const existingItem = nextItems.find((item) => item.productId === product.id);
+        const existingItem = nextItems.find((item) => item.productId === predictionItem.label);
         if (existingItem) {
+          existingItem.name = predictionItem.name;
+          existingItem.price = predictionItem.price;
           existingItem.quantity += predictionItem.quantity;
           return;
         }
 
         nextItems.push({
-          id: product.id,
-          productId: product.id,
-          name: product.name,
-          price: product.price,
+          id: predictionItem.label,
+          productId: predictionItem.label,
+          name: predictionItem.name,
+          price: predictionItem.price,
           quantity: predictionItem.quantity,
         });
       });
@@ -156,7 +134,7 @@ const App = () => {
     try {
       const videoElement = cameraVideoRef.current;
       if (!videoElement) {
-        throw new Error('Camera preview is unavailable.');
+        throw new Error('Попередній перегляд камери недоступний.');
       }
 
       const frameBlob = await captureVideoFrame(videoElement);
@@ -177,7 +155,7 @@ const App = () => {
         setRecognitionStatus('success');
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Prediction request failed.';
+      const message = error instanceof Error ? error.message : 'Не вдалося отримати відповідь від сервера.';
       setLastPrediction(buildErrorPrediction(message));
       setRecognitionStatus('error');
     }

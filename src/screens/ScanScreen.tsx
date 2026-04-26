@@ -3,6 +3,7 @@ import { AppButton } from '../components/AppButton';
 import { CameraPreview } from '../components/CameraPreview';
 import { CartPanel } from '../components/CartPanel';
 import { RecognitionStatus } from '../components/RecognitionStatus';
+import { formatCurrency } from '../utils/format';
 import type {
   CartItem,
   PredictionResponse,
@@ -104,30 +105,30 @@ export const ScanScreen = ({
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Відповідь сервера</p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-slate-700 bg-slate-950/45 px-4 py-3">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Detected</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Результат</p>
                 <p className="mt-2 text-2xl font-display font-bold text-slate-100">
-                  {lastPrediction.detected ? 'Так' : 'Ні'}
+                  {lastPrediction.detected ? 'Товар знайдено' : 'Збіг не знайдено'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950/45 px-4 py-3">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Label</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Основна мітка</p>
                 <p className="mt-2 text-2xl font-display font-bold text-slate-100">
                   {lastPrediction.label ?? 'Немає'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950/45 px-4 py-3">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Confidence</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Впевненість</p>
                 <p className="mt-2 text-2xl font-display font-bold text-slate-100">{confidencePercent}</p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950/45 px-4 py-3">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Message</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Повідомлення</p>
                 <p className="mt-2 text-lg font-semibold text-slate-100">{lastPrediction.message}</p>
               </div>
             </div>
 
             {lastPrediction.debug && (
               <p className="mt-4 text-sm font-semibold text-slate-400">
-                Debug: {lastPrediction.debug.filename ?? 'checkout-frame.jpg'} | {lastPrediction.debug.contentType ?? 'unknown content type'} | {lastPrediction.debug.sizeBytes} bytes | {lastPrediction.debug.width ?? 0}x{lastPrediction.debug.height ?? 0}
+                Запуск #{lastPrediction.debug.runId ?? 'n/a'} | {lastPrediction.debug.filename ?? 'checkout-frame.jpg'} | {lastPrediction.debug.contentType ?? 'невідомий тип'} | {lastPrediction.debug.sizeBytes} bytes | {lastPrediction.debug.width ?? 0}x{lastPrediction.debug.height ?? 0} | {lastPrediction.debug.algorithmName ?? 'algorithm'} {lastPrediction.debug.algorithmVersion ?? ''}
               </p>
             )}
           </div>
@@ -150,11 +151,21 @@ export const ScanScreen = ({
                   key={`${item.label}-${item.quantity}-${item.confidence}`}
                   className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl bg-slate-950/45 px-4 py-3"
                 >
-                  <p className="text-xl font-semibold text-slate-100">{item.label}</p>
+                  <div>
+                    <p className="text-xl font-semibold text-slate-100">{item.name}</p>
+                    <p className="mt-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                      {item.label} | {formatCurrency(item.price)}
+                    </p>
+                  </div>
                   <p className="text-lg font-semibold text-slate-300">x{item.quantity}</p>
-                  <p className="text-xl font-display font-bold text-kiosk-accent">
-                    {Math.round(item.confidence * 100)}%
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xl font-display font-bold text-kiosk-accent">
+                      {Math.round(item.confidence * 100)}%
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-400">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

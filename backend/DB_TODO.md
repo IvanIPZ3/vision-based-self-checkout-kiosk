@@ -1,14 +1,31 @@
-# Database TODO
+# Database Notes
 
-The backend is intentionally database-free for the current diploma demo stage.
+The backend now uses SQLite at:
 
-Planned tables for the next stage:
+- `backend/data/self_checkout.db`
 
-- `objects`: product catalog and object metadata.
-- `reference_images`: training/reference images linked to objects.
-- `recognition_results`: stored recognition attempts, timestamps, confidence, and session links.
+Implemented tables:
 
-Recommended next step:
+- `objects`
+- `reference_images`
+- `recognition_runs`
+- `recognition_run_items`
 
-- introduce `SQLAlchemy` or `SQLModel` with `PostgreSQL` or `SQLite`;
-- keep API contracts unchanged and only persist the already existing prediction results.
+Current runtime:
+
+- OpenCV ORB feature matching uses `reference_images` entries synced from `backend/reference_images`
+- each scan request creates one `recognition_run`
+- each accepted match is stored in `recognition_run_items`
+
+Why `recognition_runs` and `recognition_run_items`:
+
+- one scan action can produce multiple detected objects
+- `recognition_runs` stores the scan event itself
+- `recognition_run_items` stores the individual detections linked to that event
+
+Still planned for the next stage:
+
+- replace the starter reference images with the real dataset
+- improve matching thresholds or migrate to a stronger recognition model
+- add optional `checkout_sessions`
+- add optional `checkout_items`

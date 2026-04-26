@@ -8,12 +8,6 @@ export type StaffHelpReason = 'recognition_error' | 'payment_problem' | 'manual_
 
 export type ReceiptChoice = 'print' | 'digital' | null;
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-}
-
 export interface CartItem {
   id: string;
   productId: string;
@@ -23,18 +17,24 @@ export interface CartItem {
 }
 
 export interface PredictionItem {
+  objectId: number;
   label: string;
+  name: string;
+  price: number;
   quantity: number;
   confidence: number;
 }
 
 export interface PredictionDebugInfo {
+  runId: number | null;
   filename: string | null;
   contentType: string | null;
   sizeBytes: number;
   width: number | null;
   height: number | null;
   imageFormat: string | null;
+  algorithmName: string | null;
+  algorithmVersion: string | null;
 }
 
 export interface PredictionResponse {

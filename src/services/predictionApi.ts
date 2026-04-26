@@ -12,7 +12,7 @@ export const sendFrameForPrediction = async (imageBlob: Blob): Promise<Predictio
   });
 
   if (!response.ok) {
-    let errorMessage = 'Backend request failed.';
+    let errorMessage = 'Сервер не зміг обробити запит.';
 
     try {
       const errorPayload = (await response.json()) as { detail?: string };

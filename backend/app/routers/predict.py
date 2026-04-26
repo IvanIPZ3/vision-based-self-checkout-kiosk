@@ -21,20 +21,20 @@ async def predict(image: UploadFile = File(...)) -> PredictionResponse:
     if image.filename is None or not image.filename.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image file name is missing.",
+            detail="Назва файлу зображення відсутня.",
         )
 
     if image.content_type and not image.content_type.startswith("image/"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file must be an image.",
+            detail="Файл повинен бути зображенням.",
         )
 
     file_bytes = await image.read()
     if not file_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image file is empty.",
+            detail="Файл зображення порожній.",
         )
 
     try:

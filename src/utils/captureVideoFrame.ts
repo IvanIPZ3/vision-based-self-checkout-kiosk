@@ -16,7 +16,36 @@ export const captureVideoFrame = async (videoElement: HTMLVideoElement): Promise
     throw new Error('Unable to capture the current video frame.');
   }
 
-  context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  const viewportWidth = videoElement.clientWidth;
+  const viewportHeight = videoElement.clientHeight;
+
+  // Match the captured image to the visible kiosk preview instead of the full raw frame.
+  if (viewportWidth > 0 && viewportHeight > 0) {
+    const sourceWidth = videoElement.videoWidth;
+    const sourceHeight = videoElement.videoHeight;
+    const coverScale = Math.max(viewportWidth / sourceWidth, viewportHeight / sourceHeight);
+    const visibleSourceWidth = viewportWidth / coverScale;
+    const visibleSourceHeight = viewportHeight / coverScale;
+    const sourceX = Math.max((sourceWidth - visibleSourceWidth) / 2, 0);
+    const sourceY = Math.max((sourceHeight - visibleSourceHeight) / 2, 0);
+
+    canvas.width = Math.round(visibleSourceWidth);
+    canvas.height = Math.round(visibleSourceHeight);
+
+    context.drawImage(
+      videoElement,
+      sourceX,
+      sourceY,
+      visibleSourceWidth,
+      visibleSourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+  } else {
+    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  }
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
