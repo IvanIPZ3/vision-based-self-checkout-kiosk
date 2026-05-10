@@ -1,12 +1,13 @@
+import { buildApiUrl } from '../config/api';
 import type { PredictionResponse } from '../types';
 
-const predictionEndpoint = '/api/inference/predict';
+const predictionPath = '/api/inference/predict';
 
 export const sendFrameForPrediction = async (imageBlob: Blob): Promise<PredictionResponse> => {
   const formData = new FormData();
   formData.append('image', imageBlob, 'checkout-frame.jpg');
 
-  const response = await fetch(predictionEndpoint, {
+  const response = await fetch(buildApiUrl(predictionPath), {
     method: 'POST',
     body: formData,
   });

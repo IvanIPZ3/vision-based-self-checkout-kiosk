@@ -1,6 +1,6 @@
-export type Screen = 'start' | 'scan' | 'payment' | 'paymentSuccess' | 'staffHelp';
+export type Screen = 'start' | 'scan' | 'payment' | 'paymentSuccess' | 'staffHelp' | 'referenceCapture';
 
-export type RecognitionStatus = 'waiting' | 'scanning' | 'success' | 'partial' | 'error';
+export type RecognitionStatus = 'waiting' | 'scanning' | 'success' | 'partial' | 'uncertain' | 'empty' | 'error';
 
 export type PaymentStatus = 'idle' | 'processing';
 
@@ -43,6 +43,26 @@ export interface PredictionResponse {
   confidence: number;
   message: string;
   items: PredictionItem[];
+  uncertainItems: PredictionItem[];
   unresolvedCount: number;
   debug: PredictionDebugInfo | null;
+}
+
+export interface ReferenceObject {
+  id: number;
+  label: string;
+  name: string;
+}
+
+export interface ReferenceCaptureResponse {
+  objectLabel: string;
+  objectName: string;
+  viewGroup: 'front' | 'back';
+  savedPath: string;
+  filename: string;
+  width: number;
+  height: number;
+  imageFormat: string;
+  syncActive: number;
+  message: string;
 }

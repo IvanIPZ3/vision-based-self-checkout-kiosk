@@ -20,6 +20,51 @@ class ObjectRecord:
 
 
 class ObjectsRepository:
+    def list_active(self) -> list[ObjectRecord]:
+        query = """
+            SELECT id, label, name, price_minor, description, is_active
+            FROM objects
+            WHERE is_active = 1
+            ORDER BY name COLLATE NOCASE, label
+        """
+
+        with get_connection() as connection:
+            rows = connection.execute(query).fetchall()
+
+        return [
+            ObjectRecord(
+                id=row["id"],
+                label=row["label"],
+                name=row["name"],
+                price_minor=row["price_minor"],
+                description=row["description"],
+                is_active=bool(row["is_active"]),
+            )
+            for row in rows
+        ]
+
+    def get_active_by_label(self, label: str) -> ObjectRecord | None:
+        query = """
+            SELECT id, label, name, price_minor, description, is_active
+            FROM objects
+            WHERE label = ? AND is_active = 1
+        """
+
+        with get_connection() as connection:
+            row = connection.execute(query, (label,)).fetchone()
+
+        if row is None:
+            return None
+
+        return ObjectRecord(
+            id=row["id"],
+            label=row["label"],
+            name=row["name"],
+            price_minor=row["price_minor"],
+            description=row["description"],
+            is_active=bool(row["is_active"]),
+        )
+
     def get_active_by_labels(self, labels: list[str]) -> dict[str, ObjectRecord]:
         unique_labels = list(dict.fromkeys(labels))
         if not unique_labels:

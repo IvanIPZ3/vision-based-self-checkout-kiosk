@@ -1,4 +1,4 @@
-import type { RecognitionStatus as RecognitionStatusType } from '../types';
+﻿import type { RecognitionStatus as RecognitionStatusType } from '../types';
 
 interface RecognitionStatusProps {
   status: RecognitionStatusType;
@@ -35,6 +35,20 @@ const statusConfig: Record<
     chipClass: 'border-kiosk-warning bg-kiosk-warning/25 text-kiosk-warning',
     symbol: '!',
     detail: 'Розпізнані товари вже додано до чека.',
+  },
+  uncertain: {
+    title: 'Система не впевнена у результаті',
+    toneClass: 'border-kiosk-warning bg-kiosk-warning/15 text-kiosk-warning',
+    chipClass: 'border-kiosk-warning bg-kiosk-warning/25 text-kiosk-warning',
+    symbol: '?',
+    detail: 'Ймовірний товар знайдено, але його не додано до чека.',
+  },
+  empty: {
+    title: 'На платформі не виявлено товарів',
+    toneClass: 'border-sky-500/50 bg-sky-500/10 text-sky-200',
+    chipClass: 'border-sky-400/50 bg-sky-500/15 text-sky-200',
+    symbol: '○',
+    detail: 'Покладіть один товар у межах рамки та натисніть «Сканувати товари».',
   },
   error: {
     title: 'Не вдалося розпізнати товари',

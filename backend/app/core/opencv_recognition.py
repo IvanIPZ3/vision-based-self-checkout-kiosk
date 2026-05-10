@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from math import ceil
 
 import cv2
 import numpy as np
@@ -31,13 +30,14 @@ class OpenCVMatchCandidate:
 @dataclass(frozen=True)
 class OpenCVRecognitionResult:
     detected_items: list[OpenCVMatchCandidate]
+    uncertain_items: list[OpenCVMatchCandidate]
     unresolved_count: int
     message: str
 
 
 class OpenCVRecognitionEngine:
     algorithm_name = "opencv-orb-feature-matching"
-    algorithm_version = "1.0.0"
+    algorithm_version = "1.1.0"
 
     def __init__(self) -> None:
         self._orb = cv2.ORB_create(
@@ -70,27 +70,27 @@ class OpenCVRecognitionEngine:
         if not reference_images:
             return OpenCVRecognitionResult(
                 detected_items=[],
+                uncertain_items=[],
                 unresolved_count=0,
-                message=(
-                    "Еталонні зображення не налаштовані. "
-                    "Додайте файли в backend/reference_images та виконайте sync."
-                ),
+                message="Немає еталонних зображень для розпізнавання. Додайте їх у reference library та повторіть спробу.",
             )
 
         scene_image = self._decode_grayscale(image_bytes)
         if scene_image is None:
             return OpenCVRecognitionResult(
                 detected_items=[],
+                uncertain_items=[],
                 unresolved_count=0,
-                message="Не вдалося декодувати зображення для OpenCV-обробки.",
+                message="Не вдалося обробити кадр для розпізнавання.",
             )
 
         scene_keypoints, scene_descriptors = self._orb.detectAndCompute(scene_image, None)
         if scene_descriptors is None or len(scene_keypoints) < self._min_scene_keypoints:
             return OpenCVRecognitionResult(
                 detected_items=[],
+                uncertain_items=[],
                 unresolved_count=0,
-                message="На кадрі недостатньо візуальних ознак для впевненого розпізнавання.",
+                message="На платформі не виявлено товарів. Покладіть один товар у межах рамки та натисніть «Сканувати товари».",
             )
 
         all_candidates_by_group: dict[tuple[str, str | None], list[OpenCVMatchCandidate]] = defaultdict(list)
@@ -115,10 +115,12 @@ class OpenCVRecognitionEngine:
             all_candidates_by_group[group_key].append(candidate)
 
         detected_items: list[OpenCVMatchCandidate] = []
+        uncertain_items: list[OpenCVMatchCandidate] = []
         unresolved_count = 0
 
         for label, view_groups in label_order.items():
             detected_group_candidates: list[OpenCVMatchCandidate] = []
+            best_uncertain_candidate: OpenCVMatchCandidate | None = None
             has_reviewable_group = False
 
             for view_group in view_groups:
@@ -138,33 +140,47 @@ class OpenCVRecognitionEngine:
                     detected_group_candidates.append(max(detection_candidates, key=self._candidate_sort_key))
                     continue
 
-                if review_candidates or detection_candidates:
-                    has_reviewable_group = True
-                    continue
+                candidate_for_review: OpenCVMatchCandidate | None = None
+                if review_candidates:
+                    candidate_for_review = max(review_candidates, key=self._candidate_sort_key)
+                elif detection_candidates:
+                    candidate_for_review = max(detection_candidates, key=self._candidate_sort_key)
+                elif best_candidate.good_matches >= self._min_good_matches_for_review:
+                    candidate_for_review = best_candidate
 
-                if best_candidate.good_matches >= self._min_good_matches_for_review:
+                if candidate_for_review is not None:
+                    if (
+                        best_uncertain_candidate is None
+                        or self._candidate_sort_key(candidate_for_review) > self._candidate_sort_key(best_uncertain_candidate)
+                    ):
+                        best_uncertain_candidate = candidate_for_review
                     has_reviewable_group = True
 
             if detected_group_candidates:
                 detected_items.append(max(detected_group_candidates, key=self._candidate_sort_key))
-            elif has_reviewable_group:
+            elif has_reviewable_group and best_uncertain_candidate is not None:
+                uncertain_items.append(best_uncertain_candidate)
                 unresolved_count += 1
 
         detected_items.sort(
             key=lambda candidate: (-candidate.confidence, -candidate.inliers, candidate.label),
         )
+        uncertain_items.sort(
+            key=lambda candidate: (-candidate.confidence, -candidate.inliers, candidate.label),
+        )
 
         if detected_items and unresolved_count > 0:
-            message = "Частину товарів вдалося знайти, але деякі позиції потребують повторного сканування."
+            message = "Частину товарів розпізнано, але деякі позиції не вдалося впевнено підтвердити."
         elif detected_items:
-            message = "OpenCV-розпізнавання знайшло товари на платформі."
-        elif unresolved_count > 0:
-            message = "Є слабкі збіги, але їх недостатньо для впевненого розпізнавання."
+            message = "Товар успішно розпізнано та додано до чека."
+        elif uncertain_items:
+            message = "Система бачить ймовірний товар, але поки не може впевнено його підтвердити."
         else:
-            message = "OpenCV не знайшов збігів із еталонними зображеннями."
+            message = "Товар не знайдено. Переконайтеся, що один товар лежить у межах рамки."
 
         return OpenCVRecognitionResult(
             detected_items=detected_items,
+            uncertain_items=uncertain_items,
             unresolved_count=unresolved_count,
             message=message,
         )
@@ -302,10 +318,8 @@ class OpenCVRecognitionEngine:
         total_references: int,
     ) -> bool:
         required_support = 1
-        if total_references >= 3:
+        if total_references >= 4:
             required_support = 2
-        if total_references >= 8:
-            required_support = max(required_support, ceil(total_references * 0.25))
 
         unique_reference_count = len({candidate.reference_image_id for candidate in detection_candidates})
         if unique_reference_count >= required_support:
@@ -313,9 +327,9 @@ class OpenCVRecognitionEngine:
 
         best_candidate = max(detection_candidates, key=self._candidate_sort_key)
         return (
-            best_candidate.confidence >= 0.9
-            and best_candidate.inliers >= 26
-            and best_candidate.inlier_ratio >= 0.72
+            best_candidate.confidence >= 0.85
+            and best_candidate.inliers >= 16
+            and best_candidate.inlier_ratio >= 0.58
         )
 
     def _decode_grayscale(self, image_bytes: bytes) -> np.ndarray | None:

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.db.database import init_database
 from backend.app.db.sync_reference_images import sync_reference_images
 from backend.app.routers.predict import router as prediction_router
+from backend.app.routers.reference_library import router as reference_library_router
 
 
 @asynccontextmanager
@@ -34,3 +35,4 @@ app.add_middleware(
 )
 
 app.include_router(prediction_router)
+app.include_router(reference_library_router)

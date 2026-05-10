@@ -18,9 +18,12 @@ export const captureVideoFrame = async (videoElement: HTMLVideoElement): Promise
 
   const viewportWidth = videoElement.clientWidth;
   const viewportHeight = videoElement.clientHeight;
+  const objectFit = window.getComputedStyle(videoElement).objectFit;
 
   // Match the captured image to the visible kiosk preview instead of the full raw frame.
-  if (viewportWidth > 0 && viewportHeight > 0) {
+  if (objectFit === 'contain') {
+    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  } else if (viewportWidth > 0 && viewportHeight > 0) {
     const sourceWidth = videoElement.videoWidth;
     const sourceHeight = videoElement.videoHeight;
     const coverScale = Math.max(viewportWidth / sourceWidth, viewportHeight / sourceHeight);

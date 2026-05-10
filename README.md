@@ -1,264 +1,172 @@
 # Vision-Based Self-Checkout Kiosk
 
-Browser-based self-checkout prototype for a diploma demo about object identification by image.
+Browser-based self-checkout prototype for a diploma project about object identification by image.
 
-## Architecture
+## Stack
 
-- `Client`: React + TypeScript + Vite kiosk UI
-- `Server`: FastAPI inference API with OpenCV-based recognition
-- `Database`: SQLite catalog and recognition history
+- Frontend: React + TypeScript + Vite + Tailwind CSS
+- Backend: FastAPI + OpenCV
+- Database: SQLite
 
-Current flow:
+## What Works Now
 
-1. The browser opens the kiosk UI.
-2. The webcam preview runs in the client.
-3. The client captures a frame from the webcam.
-4. The client sends the frame to the backend with `multipart/form-data`.
-5. The backend validates the image, runs OpenCV feature matching against reference images, stores the scan run in SQLite, and returns JSON.
-6. The client shows the recognition result and updates the receipt.
+- kiosk-style self-checkout UI in Ukrainian
+- webcam preview in the browser
+- frame capture on `Сканувати товари`
+- backend image processing with OpenCV ORB feature matching
+- object catalog and recognition history stored in SQLite
+- reference-image management for books and other objects
+- separate admin screen for capturing new reference images from the same webcam setup
 
-## Repository Structure
+## Project Structure
 
-- `src/`: frontend application
-- `backend/app/`: backend API
-- `backend/app/core/`: recognition service
-- `backend/app/db/`: SQLite initialization and seed data
-- `backend/app/repositories/`: database access layer
-- `backend/data/`: runtime SQLite database file and catalog seed JSON
+- `src/` - frontend app
+- `backend/app/` - backend API
+- `backend/app/core/` - recognition logic
+- `backend/app/db/` - SQLite init and sync logic
+- `backend/app/repositories/` - database access
+- `backend/reference_images/` - active reference image folders
+- `backend/data/objects_seed.json` - object catalog seed
 
-## Database Schema
+## Local Development
 
-Implemented now:
-
-- `objects`: object catalog used by the backend as the source of truth
-- `reference_images`: placeholder table for future OpenCV/reference image work
-- `recognition_runs`: one record per scan button press
-- `recognition_run_items`: one record per detected item inside a scan run
-
-Why the split matters:
-
-- one platform scan can produce zero, one, or many detections
-- `recognition_runs` stores the scan event
-- `recognition_run_items` stores the detected objects linked to that event
-
-The SQLite file is created automatically at:
-
-- `backend/data/self_checkout.db`
-
-## Reference Image Workflow
-
-The object catalog is defined in:
-
-- `backend/data/objects_seed.json`
-
-Each item in that file must describe one object:
-
-```json
-{
-  "label": "book",
-  "name": "Книга",
-  "price": 120
-}
-```
-
-Important:
-
-- `label` is the technical identifier
-- the folder name inside `backend/reference_images/` must match `label`
-- `name` and `price` are returned to the frontend and used in the receipt
-
-OpenCV recognition uses the files stored in:
-
-- `backend/reference_images/<label>/...`
-
-The repository now includes a small generated demo reference set for:
-
-- `milk`
-- `bread`
-- `apples`
-
-These files are only a starter dataset for local verification.  
-For a diploma-quality demo, replace them with real product images captured from a perspective close to the kiosk camera.
-
-You do not need special file naming. These are all valid examples:
-
-- `IMG_4328832.jpg`
-- `photo_2026-04-25_14-01-33.png`
-- `DSC00451.jpeg`
-
-The backend uses:
-
-- folder name -> to determine which object the image belongs to
-- file path -> to track active reference images
-- file name -> only as metadata
-
-The backend syncs `backend/reference_images` into the `reference_images` table automatically on startup.
-
-Manual sync is also available:
-
-```bash
-python -m backend.app.db.sync_reference_images
-```
-
-## API Endpoints
-
-- `GET /health`
-- `GET /api/inference/health`
-- `POST /predict`
-- `POST /api/inference/predict`
-
-`/predict` and `/api/inference/predict` are intentionally kept compatible.
-
-## Prediction Response Format
-
-```json
-{
-  "detected": true,
-  "label": "milk",
-  "confidence": 0.97,
-  "message": "Сервер обробив кадр та знайшов товари.",
-  "items": [
-    {
-      "objectId": 1,
-      "label": "milk",
-      "name": "Молоко 2.5%",
-      "price": 58.0,
-      "quantity": 1,
-      "confidence": 0.97
-    }
-  ],
-  "unresolvedCount": 0,
-  "debug": {
-    "runId": 1,
-    "filename": "checkout-frame.jpg",
-    "contentType": "image/jpeg",
-    "sizeBytes": 123456,
-    "width": 1280,
-    "height": 720,
-    "imageFormat": "JPEG",
-    "algorithmName": "mock-platform-recognition",
-    "algorithmVersion": "0.1.0"
-  }
-}
-```
-
-The backend now uses a real OpenCV ORB feature-matching pipeline.  
-It is still a first version, so quantity estimation is conservative and currently returns `1` per detected object match.
-
-## Install Frontend
+### Frontend
 
 ```bash
 npm install
-```
-
-## Run Frontend
-
-```bash
 npm run dev
 ```
 
-Frontend URL:
+Open:
 
-- `http://localhost:5173`
+- [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
 
-## Install Backend
-
-Create and activate a Python environment, then install backend dependencies:
+### Backend
 
 ```bash
 pip install -r backend/requirements.txt
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-## Initialize Database Manually (Optional)
+Backend health:
 
-The backend initializes the database automatically on startup.  
-If you want to create it manually first:
+- [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-```bash
-python -m backend.app.db.init_db
-```
+## Recognition Flow
 
-If you add or replace reference images and want to resync them manually:
+1. The browser shows the webcam preview.
+2. The user places one object on the platform.
+3. The user clicks `Сканувати товари`.
+4. The frontend captures one frame.
+5. The frame is sent to the backend with `multipart/form-data`.
+6. The backend compares the frame against reference images with OpenCV ORB feature matching.
+7. The backend returns a JSON response and stores the scan run in SQLite.
+8. The frontend updates the receipt or shows a clear empty / uncertain / error state.
+
+## Reference Image Workflow
+
+Object catalog:
+
+- `backend/data/objects_seed.json`
+
+Reference folders:
+
+- `backend/reference_images/<label>/front/`
+- `backend/reference_images/<label>/back/`
+
+The backend syncs reference images automatically on startup.
+
+Manual sync:
 
 ```bash
 python -m backend.app.db.sync_reference_images
 ```
 
-If you edit `backend/data/objects_seed.json`, restart the backend so the catalog is reseeded into SQLite.
+## Admin Reference Capture
 
-## Run Backend
+There is a separate admin-only frontend screen for saving new reference frames from the same webcam setup.
 
-```bash
-uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
-```
+Local URL:
 
-Backend URL:
+- [http://127.0.0.1:5173/admin/reference-capture](http://127.0.0.1:5173/admin/reference-capture)
 
-- `http://127.0.0.1:8000`
+This screen lets you:
 
-Health check:
+- choose an object from the backend catalog
+- choose `front` or `back`
+- capture the current webcam frame
+- save it directly into `backend/reference_images/...`
+- sync it immediately into SQLite
 
-- `http://127.0.0.1:8000/health`
+## GitHub Pages Hosting
 
-## Local Development Proxy
+The repository is prepared for GitHub Pages hosting of the **frontend**.
 
-Vite proxies:
+Important limitation:
 
-- `/api/*` -> `http://127.0.0.1:8000`
+- GitHub Pages can host only the static frontend
+- the FastAPI + OpenCV backend cannot run on GitHub Pages
 
-That allows the frontend to call:
+That means:
 
-- `/api/inference/predict`
+- the kiosk UI can be published on GitHub Pages
+- full scanning and reference-capture features need a real backend URL
 
-without hardcoding backend hostnames in the browser code.
+If the frontend is opened on GitHub Pages without a configured backend, the app now shows a clear message instead of making broken relative API calls.
 
-## How To Verify The Full Flow
-
-1. Start the backend on port `8000`.
-2. Start the frontend on port `5173`.
-3. Open `http://localhost:5173`.
-4. Allow webcam access in the browser.
-5. Place items on the platform and click `Сканувати товари`.
-6. Confirm that:
-   - the UI shows the backend response block;
-   - the receipt updates using `name` and `price` returned by the backend;
-   - repeated scans create new database rows.
-   - detection results change depending on the actual image content.
-
-## How To Inspect Stored Recognition Runs
-
-Example command:
+### GitHub Pages Build
 
 ```bash
-python -c "import sqlite3; conn = sqlite3.connect('backend/data/self_checkout.db'); print(conn.execute('SELECT id, detected_any, unresolved_count, message FROM recognition_runs ORDER BY id DESC LIMIT 5').fetchall())"
+npm run build:pages
 ```
 
-Example for detected items:
+This build:
+
+- uses the repository base path
+- creates `dist/404.html` for SPA fallback
+- writes `dist/.nojekyll`
+
+### GitHub Actions Deployment
+
+The repo includes a GitHub Actions workflow for Pages deployment:
+
+- `.github/workflows/deploy-pages.yml`
+
+To let the hosted frontend talk to a deployed backend, set this repository variable in GitHub:
+
+- `VITE_API_BASE_URL`
+
+Example:
+
+```text
+https://your-backend.example.com
+```
+
+Without that variable, the static site still opens, but scanning and reference capture will warn that no backend API is configured for this deployment.
+
+### GitHub Pages URLs
+
+Main frontend:
+
+- `https://IvanIPZ3.github.io/vision-based-self-checkout-kiosk/`
+
+Admin reference capture on Pages:
+
+- `https://IvanIPZ3.github.io/vision-based-self-checkout-kiosk/#/admin/reference-capture`
+
+## Validation
+
+These commands should pass:
 
 ```bash
-python -c "import sqlite3; conn = sqlite3.connect('backend/data/self_checkout.db'); print(conn.execute('SELECT run_id, predicted_label, quantity, confidence FROM recognition_run_items ORDER BY id DESC LIMIT 10').fetchall())"
+npm run build
+npm run lint
+py -m compileall backend
 ```
 
-## Current Status
+## Current Hosting Model
 
-- webcam preview works in the browser
-- frontend sends a captured frame to the backend
-- backend validates and decodes the uploaded image
-- backend seeds SQLite from `backend/data/objects_seed.json`
-- backend runs OpenCV ORB feature matching against synced reference images
-- backend stores scan runs and run items
-- frontend shows backend results and updates the receipt
+- GitHub Pages: frontend only
+- local machine or separate server: backend API
 
-## Next Step
-
-### Recognition quality improvements
-
-- replace the starter reference set with real object images from your dataset
-- tune ORB thresholds for your camera angle and lighting
-- add quantity estimation or move to a model-based detector if multiple identical objects must be counted
-
-### Extended checkout persistence
-
-- add `checkout_sessions`
-- add `checkout_items`
-- link checkout items to specific recognition runs when needed
+This is the intended setup for the current diploma prototype.

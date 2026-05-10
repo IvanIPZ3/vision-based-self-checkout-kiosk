@@ -32,5 +32,6 @@ class PredictionResponse(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0)
     message: str
     items: list[PredictionItem] = Field(default_factory=list)
+    uncertainItems: list[PredictionItem] = Field(default_factory=list)
     unresolvedCount: int = 0
     debug: PredictionDebugInfo | None = None

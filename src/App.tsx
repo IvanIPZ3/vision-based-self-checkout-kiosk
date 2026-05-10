@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { PaymentScreen } from './screens/PaymentScreen';
+import { ReferenceCaptureScreen } from './screens/ReferenceCaptureScreen';
 import { ScanScreen } from './screens/ScanScreen';
 import { StaffHelpScreen } from './screens/StaffHelpScreen';
 import { StartScreen } from './screens/StartScreen';
@@ -19,6 +20,42 @@ import { captureVideoFrame } from './utils/captureVideoFrame';
 
 type NonHelpScreen = Exclude<Screen, 'staffHelp'>;
 
+const adminReferenceCapturePath = '/admin/reference-capture';
+
+const getClientRoute = () => {
+  const hashRoute = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+  if (hashRoute) {
+    return hashRoute;
+  }
+
+  if (window.location.pathname.endsWith(adminReferenceCapturePath)) {
+    return adminReferenceCapturePath;
+  }
+
+  return '/';
+};
+
+const getScreenFromLocation = (): Screen => (getClientRoute() === adminReferenceCapturePath ? 'referenceCapture' : 'start');
+
+const navigateTo = (path: string) => {
+  const isGitHubPages = window.location.hostname.endsWith('github.io');
+
+  if (isGitHubPages) {
+    const basePath = window.location.pathname.endsWith('/') ? window.location.pathname : `${window.location.pathname}/`;
+    const nextUrl = path === '/' ? basePath : `${basePath}#${path}`;
+    if (`${window.location.pathname}${window.location.hash}` !== nextUrl) {
+      window.history.pushState({}, '', nextUrl);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+    return;
+  }
+
+  if (window.location.pathname !== path) {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+};
+
 const clearTimeoutIfPresent = (timeoutRef: MutableRefObject<number | null>) => {
   if (timeoutRef.current) {
     window.clearTimeout(timeoutRef.current);
@@ -32,12 +69,16 @@ const buildErrorPrediction = (message: string): PredictionResponse => ({
   confidence: 0,
   message,
   items: [],
+  uncertainItems: [],
   unresolvedCount: 0,
   debug: null,
 });
 
+const isEmptyPlatformMessage = (message: string | null | undefined) =>
+  typeof message === 'string' && message.startsWith('На платформі не виявлено товарів');
+
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('start');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(getScreenFromLocation);
   const [returnScreen, setReturnScreen] = useState<NonHelpScreen>('start');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -60,6 +101,17 @@ const App = () => {
     return () => {
       clearTimeoutIfPresent(recognitionResetTimeoutRef);
       clearTimeoutIfPresent(paymentTimeoutRef);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentScreen(getScreenFromLocation());
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
     };
   }, []);
 
@@ -147,7 +199,11 @@ const App = () => {
 
       setLastPrediction(prediction);
 
-      if (!prediction.detected) {
+      if (!prediction.detected && prediction.uncertainItems.length > 0) {
+        setRecognitionStatus('uncertain');
+      } else if (!prediction.detected && isEmptyPlatformMessage(prediction.message)) {
+        setRecognitionStatus('empty');
+      } else if (!prediction.detected) {
         setRecognitionStatus('error');
       } else if (prediction.unresolvedCount > 0) {
         setRecognitionStatus('partial');
@@ -218,6 +274,16 @@ const App = () => {
     <main className="h-screen w-screen overflow-y-auto overflow-x-hidden p-3 text-slate-100 lg:p-5">
       {currentScreen === 'start' && (
         <StartScreen onStart={handleStartShopping} onRequestStaff={() => handleOpenStaffHelp('manual_request')} />
+      )}
+
+      {currentScreen === 'referenceCapture' && (
+        <ReferenceCaptureScreen
+          cameraVideoRef={cameraVideoRef}
+          onBack={() => {
+            navigateTo('/');
+            setCurrentScreen('start');
+          }}
+        />
       )}
 
       {currentScreen === 'scan' && (

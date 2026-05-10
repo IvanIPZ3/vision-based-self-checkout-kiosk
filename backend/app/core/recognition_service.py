@@ -38,47 +38,65 @@ class RecognitionService:
             image_bytes=image_bytes,
             reference_images=reference_images,
         )
-        requested_labels = [item.label for item in recognition_result.detected_items]
+
+        requested_labels = list(
+            {
+                item.label
+                for item in [*recognition_result.detected_items, *recognition_result.uncertain_items]
+            }
+        )
         objects_by_label = objects_repository.get_active_by_labels(requested_labels)
 
         prediction_items: list[PredictionItem] = []
+        uncertain_prediction_items: list[PredictionItem] = []
         run_items: list[RecognitionRunItemPayload] = []
 
         for item in recognition_result.detected_items:
-            label = item.label
-            quantity = item.quantity
-            confidence = item.confidence
-            good_matches = item.good_matches
-            inliers = item.inliers
+          catalog_object = objects_by_label.get(item.label)
+          if catalog_object is None:
+              continue
 
-            catalog_object = objects_by_label.get(label)
+          prediction_items.append(
+              PredictionItem(
+                  objectId=catalog_object.id,
+                  label=catalog_object.label,
+                  name=catalog_object.name,
+                  price=catalog_object.price,
+                  quantity=item.quantity,
+                  confidence=item.confidence,
+              )
+          )
+          run_items.append(
+              RecognitionRunItemPayload(
+                  object_id=catalog_object.id,
+                  predicted_label=catalog_object.label,
+                  quantity=item.quantity,
+                  confidence=item.confidence,
+                  good_matches=item.good_matches,
+                  inliers=item.inliers,
+              )
+          )
+
+        for item in recognition_result.uncertain_items:
+            catalog_object = objects_by_label.get(item.label)
             if catalog_object is None:
                 continue
 
-            prediction_items.append(
+            uncertain_prediction_items.append(
                 PredictionItem(
                     objectId=catalog_object.id,
                     label=catalog_object.label,
                     name=catalog_object.name,
                     price=catalog_object.price,
-                    quantity=quantity,
-                    confidence=confidence,
-                )
-            )
-            run_items.append(
-                RecognitionRunItemPayload(
-                    object_id=catalog_object.id,
-                    predicted_label=catalog_object.label,
-                    quantity=quantity,
-                    confidence=confidence,
-                    good_matches=good_matches,
-                    inliers=inliers,
+                    quantity=item.quantity,
+                    confidence=item.confidence,
                 )
             )
 
         unresolved_count = recognition_result.unresolved_count
-
         primary_item = prediction_items[0] if prediction_items else None
+        primary_uncertain_item = uncertain_prediction_items[0] if uncertain_prediction_items else None
+
         run_id = recognition_runs_repository.create_run(
             run=RecognitionRunPayload(
                 request_filename=filename,
@@ -97,10 +115,11 @@ class RecognitionService:
 
         return PredictionResponse(
             detected=bool(prediction_items),
-            label=primary_item.label if primary_item else None,
+            label=primary_item.label if primary_item else (primary_uncertain_item.label if primary_uncertain_item else None),
             confidence=primary_item.confidence if primary_item else 0.0,
             message=recognition_result.message,
             items=prediction_items,
+            uncertainItems=uncertain_prediction_items,
             unresolvedCount=unresolved_count,
             debug=PredictionDebugInfo(
                 runId=run_id,
