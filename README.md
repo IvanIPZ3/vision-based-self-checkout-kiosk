@@ -98,6 +98,59 @@ This screen lets you:
 - save it directly into `backend/reference_images/...`
 - sync it immediately into SQLite
 
+Admin protection:
+
+- the admin reference-capture screen is password protected
+- the backend API for listing objects and saving reference frames is also password protected
+- current local demo password: `rinkakyu`
+- for hosted deployment, set `REFERENCE_ADMIN_PASSWORD` in backend app settings
+
+## Azure Hosting
+
+The repository is now prepared for Azure hosting with the current frontend/backend split:
+
+- frontend: **Azure Static Web Apps**
+- backend: **Azure App Service (Linux, Python)**
+- database: **SQLite**
+
+Important limitation:
+
+- SQLite is acceptable for a single-instance diploma demo deployment
+- do not scale the backend to multiple instances while keeping SQLite
+- reference images and the SQLite file should be treated as demo persistence, not production storage
+
+### Azure GitHub Actions
+
+Azure-ready workflows included in the repo:
+
+- `.github/workflows/deploy-azure-frontend.yml`
+- `.github/workflows/deploy-azure-backend.yml`
+
+These workflows expect:
+
+- GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
+- GitHub secret `AZURE_BACKEND_PUBLISH_PROFILE`
+- GitHub variable `AZURE_BACKEND_APP_NAME`
+- GitHub variable `VITE_API_BASE_URL`
+
+### Azure Provisioning Script
+
+The repo also includes a provisioning script that creates the Azure resources and pushes the needed GitHub secrets/variables:
+
+```powershell
+./scripts/azure/provision.ps1
+```
+
+What it does:
+
+- creates the resource group
+- creates the App Service plan
+- creates the backend App Service
+- creates the Static Web App
+- configures backend app settings, including CORS and admin password
+- pulls the Azure deployment tokens
+- writes the GitHub secrets and variables needed for CI/CD
+
 ## GitHub Pages Hosting
 
 The repository is prepared for GitHub Pages hosting of the **frontend**.

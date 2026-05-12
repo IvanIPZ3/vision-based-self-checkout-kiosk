@@ -69,15 +69,15 @@
   }
 
   .platform-stage {
-    @apply grid gap-5 rounded-[1.75rem] border border-slate-700/70 bg-slate-950/30 p-4 sm:p-5 xl:grid-cols-[minmax(420px,560px)_minmax(260px,1fr)] xl:items-stretch;
+    @apply grid gap-4 rounded-[1.75rem] border border-slate-700/70 bg-slate-950/30 p-3 sm:p-4 xl:grid-cols-[minmax(320px,420px)_minmax(260px,1fr)] xl:items-stretch;
   }
 
   .platform-portrait {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 4 / 4.8;
   }
 
   .platform-preview-shell {
-    @apply w-full max-w-[560px] justify-self-center xl:justify-self-start;
+    @apply w-full max-w-[420px] justify-self-center xl:justify-self-start;
   }
 
   .platform-shell::before {
@@ -110,8 +110,44 @@
     @apply flex h-full flex-col justify-center rounded-2xl border border-slate-700/70 bg-slate-950/70 px-6 py-6 text-left backdrop-blur;
   }
 
+  .platform-status-card {
+    @apply flex h-full min-h-0 flex-col rounded-2xl border border-slate-700/70 bg-slate-950/70 px-4 py-4 text-left backdrop-blur;
+  }
+
+  .platform-status-body {
+    @apply mt-3 flex-1 space-y-3 overflow-auto pr-1;
+  }
+
+  .platform-result-row {
+    @apply grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/70 px-4 py-4;
+  }
+
+  .platform-result-summary {
+    @apply text-right;
+  }
+
+  .platform-result-qty {
+    @apply text-xl font-display font-bold text-kiosk-accent;
+  }
+
+  .platform-result-total {
+    @apply mt-1 text-lg font-display font-bold text-slate-100;
+  }
+
+  .platform-result-confidence {
+    @apply text-2xl font-display font-bold;
+  }
+
+  .platform-result-tag {
+    @apply mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-kiosk-warning;
+  }
+
+  .platform-result-meta {
+    @apply mt-1 text-sm font-semibold text-slate-400;
+  }
+
   .platform-tip {
-    @apply grid grid-cols-[auto_1fr] items-start gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/65 px-4 py-3 text-base font-semibold text-slate-200;
+    @apply grid grid-cols-[auto_1fr] items-start gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/65 px-3 py-2.5 text-sm font-semibold text-slate-200 sm:text-base;
   }
 
   .platform-tip-index {
@@ -127,6 +163,10 @@
   }
 
   .field-select {
+    @apply mt-3 min-h-[60px] w-full rounded-xl border border-slate-600 bg-slate-900 px-4 text-lg font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30;
+  }
+
+  .field-input {
     @apply mt-3 min-h-[60px] w-full rounded-xl border border-slate-600 bg-slate-900 px-4 text-lg font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30;
   }
 

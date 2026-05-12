@@ -63,13 +63,13 @@ export const RecognitionStatus = ({ status }: RecognitionStatusProps) => {
   const config = statusConfig[status];
 
   return (
-    <div className={`grid grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border px-5 py-4 ${config.toneClass}`}>
-      <div className={`flex h-14 w-14 items-center justify-center rounded-full border text-2xl font-extrabold ${config.chipClass}`}>
+    <div className={`grid grid-cols-[auto_1fr] items-center gap-3 rounded-2xl border px-4 py-3 ${config.toneClass}`}>
+      <div className={`flex h-12 w-12 items-center justify-center rounded-full border text-xl font-extrabold ${config.chipClass}`}>
         {config.symbol}
       </div>
       <div>
-        <p className="text-2xl font-display font-bold">{config.title}</p>
-        <p className="mt-1 text-base font-semibold text-slate-200">{config.detail}</p>
+        <p className="text-lg font-display font-bold leading-tight sm:text-[1.35rem]">{config.title}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-200">{config.detail}</p>
       </div>
     </div>
   );

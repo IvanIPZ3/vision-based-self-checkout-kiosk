@@ -1,0 +1,21 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/*.css",
+      "/*.js",
+      "/*.png",
+      "/*.jpg",
+      "/*.jpeg",
+      "/*.svg",
+      "/*.ico"
+    ]
+  },
+  "routes": [
+    {
+      "route": "/admin/reference-capture",
+      "rewrite": "/index.html"
+    }
+  ]
+}

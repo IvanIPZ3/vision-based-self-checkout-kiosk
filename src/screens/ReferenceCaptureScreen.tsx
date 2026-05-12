@@ -10,7 +10,13 @@ interface ReferenceCaptureScreenProps {
   onBack: () => void;
 }
 
+const adminPasswordStorageKey = 'reference-admin-password';
+
 export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCaptureScreenProps) => {
+  const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem(adminPasswordStorageKey) ?? '');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [objects, setObjects] = useState<ReferenceObject[]>([]);
   const [selectedObjectLabel, setSelectedObjectLabel] = useState('');
   const [selectedViewGroup, setSelectedViewGroup] = useState<'front' | 'back'>('front');
@@ -24,11 +30,17 @@ export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCapt
     let isMounted = true;
 
     const loadObjects = async () => {
+      if (!adminPassword) {
+        setIsLoadingObjects(false);
+        setObjects([]);
+        return;
+      }
+
       setIsLoadingObjects(true);
       setLoadError(null);
 
       try {
-        const activeObjects = await fetchReferenceObjects();
+        const activeObjects = await fetchReferenceObjects(adminPassword);
         if (!isMounted) {
           return;
         }
@@ -46,7 +58,10 @@ export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCapt
           return;
         }
 
-        setLoadError(error instanceof Error ? error.message : 'Не вдалося завантажити каталог еталонів.');
+        sessionStorage.removeItem(adminPasswordStorageKey);
+        setAdminPassword('');
+        setAuthError(error instanceof Error ? error.message : 'Не вдалося підтвердити пароль адміністратора.');
+        setLoadError(null);
       } finally {
         if (isMounted) {
           setIsLoadingObjects(false);
@@ -59,7 +74,41 @@ export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCapt
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [adminPassword]);
+
+  const handleAuthenticate = async () => {
+    const trimmedPassword = passwordInput.trim();
+    if (!trimmedPassword) {
+      setAuthError('Введіть пароль адміністратора.');
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setAuthError(null);
+
+    try {
+      await fetchReferenceObjects(trimmedPassword);
+      sessionStorage.setItem(adminPasswordStorageKey, trimmedPassword);
+      setAdminPassword(trimmedPassword);
+      setPasswordInput('');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Не вдалося підтвердити пароль адміністратора.');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(adminPasswordStorageKey);
+    setAdminPassword('');
+    setPasswordInput('');
+    setAuthError(null);
+    setLoadError(null);
+    setSaveError(null);
+    setLastSavedCapture(null);
+    setObjects([]);
+    setSelectedObjectLabel('');
+  };
 
   const handleSaveCapture = async () => {
     const videoElement = cameraVideoRef.current;
@@ -78,14 +127,66 @@ export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCapt
 
     try {
       const frameBlob = await captureVideoFrame(videoElement);
-      const savedCapture = await saveReferenceCapture(selectedObjectLabel, selectedViewGroup, frameBlob);
+      const savedCapture = await saveReferenceCapture(adminPassword, selectedObjectLabel, selectedViewGroup, frameBlob);
       setLastSavedCapture(savedCapture);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Не вдалося зберегти еталонне зображення.');
+      const nextError = error instanceof Error ? error.message : 'Не вдалося зберегти еталонне зображення.';
+      if (nextError === 'Невірний пароль адміністратора.') {
+        handleLogout();
+        setAuthError(nextError);
+        return;
+      }
+
+      setSaveError(nextError);
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (!adminPassword) {
+    return (
+      <section className="kiosk-shell mx-auto grid min-h-[720px] w-full max-w-3xl grid-cols-1 gap-4 px-5 py-5">
+        <div className="panel flex flex-col gap-5 p-7">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">Адмінський доступ</p>
+            <h1 className="mt-2 text-4xl font-display font-bold text-white">Вхід до керування еталонними фото</h1>
+            <p className="mt-4 text-lg font-semibold leading-relaxed text-slate-300">
+              Цей розділ призначений лише для додавання нових еталонних кадрів у каталог розпізнавання.
+            </p>
+          </div>
+
+          <div className="field-shell">
+            <p className="field-label">Пароль адміністратора</p>
+            <input
+              className="field-input"
+              type="password"
+              value={passwordInput}
+              onChange={(event) => setPasswordInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  void handleAuthenticate();
+                }
+              }}
+              placeholder="Введіть пароль"
+              autoComplete="current-password"
+            />
+            <p className="field-note">Пароль перевіряється на backend перед завантаженням каталогу книг.</p>
+          </div>
+
+          {authError && <div className="capture-status-card border-kiosk-danger text-lg font-semibold text-red-200">{authError}</div>}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AppButton variant="primary" size="md" fullWidth onClick={handleAuthenticate} disabled={isAuthenticating}>
+              {isAuthenticating ? 'Перевірка пароля...' : 'Увійти'}
+            </AppButton>
+            <AppButton variant="ghost" size="md" fullWidth onClick={onBack}>
+              Повернутися назад
+            </AppButton>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="kiosk-shell mx-auto grid min-h-[920px] w-full max-w-7xl grid-cols-12 gap-4 px-5 py-5">
@@ -188,6 +289,9 @@ export const ReferenceCaptureScreen = ({ cameraVideoRef, onBack }: ReferenceCapt
               disabled={isLoadingObjects || isSaving || !selectedObjectLabel}
             >
               {isSaving ? 'Збереження кадру...' : 'Зберегти кадр як еталон'}
+            </AppButton>
+            <AppButton variant="secondary" size="md" fullWidth onClick={handleLogout}>
+              Вийти з адмінки
             </AppButton>
             <AppButton variant="ghost" size="md" fullWidth onClick={onBack}>
               Повернутися на стартовий екран

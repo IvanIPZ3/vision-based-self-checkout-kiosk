@@ -3,6 +3,7 @@ import type { ReferenceCaptureResponse, ReferenceObject } from '../types';
 
 const objectsPath = '/api/reference-library/objects';
 const capturePath = '/api/reference-library/capture';
+const adminPasswordHeader = 'x-admin-password';
 
 const extractApiError = async (response: Response, fallbackMessage: string) => {
   let errorMessage = fallbackMessage;
@@ -19,8 +20,12 @@ const extractApiError = async (response: Response, fallbackMessage: string) => {
   return errorMessage;
 };
 
-export const fetchReferenceObjects = async (): Promise<ReferenceObject[]> => {
-  const response = await fetch(buildApiUrl(objectsPath));
+export const fetchReferenceObjects = async (adminPassword: string): Promise<ReferenceObject[]> => {
+  const response = await fetch(buildApiUrl(objectsPath), {
+    headers: {
+      [adminPasswordHeader]: adminPassword,
+    },
+  });
 
   if (!response.ok) {
     throw new Error(await extractApiError(response, 'Не вдалося завантажити каталог еталонів.'));
@@ -31,6 +36,7 @@ export const fetchReferenceObjects = async (): Promise<ReferenceObject[]> => {
 };
 
 export const saveReferenceCapture = async (
+  adminPassword: string,
   objectLabel: string,
   viewGroup: 'front' | 'back',
   imageBlob: Blob,
@@ -42,6 +48,9 @@ export const saveReferenceCapture = async (
 
   const response = await fetch(buildApiUrl(capturePath), {
     method: 'POST',
+    headers: {
+      [adminPasswordHeader]: adminPassword,
+    },
     body: formData,
   });
 

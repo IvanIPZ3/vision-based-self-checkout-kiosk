@@ -1,7 +1,8 @@
 from typing import Literal
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
+from backend.app.core.admin_auth import verify_admin_password
 from backend.app.core.reference_library_service import (
     ReferenceCaptureError,
     reference_library_service,
@@ -16,7 +17,7 @@ router = APIRouter(tags=["reference-library"])
 
 
 @router.get("/api/reference-library/objects", response_model=ReferenceObjectsResponse)
-async def list_reference_objects() -> ReferenceObjectsResponse:
+async def list_reference_objects(_: None = Depends(verify_admin_password)) -> ReferenceObjectsResponse:
     return ReferenceObjectsResponse(
         items=[
             ReferenceObjectItem(**item)
@@ -27,6 +28,7 @@ async def list_reference_objects() -> ReferenceObjectsResponse:
 
 @router.post("/api/reference-library/capture", response_model=ReferenceCaptureResponse)
 async def capture_reference_image(
+    _: None = Depends(verify_admin_password),
     objectLabel: str = Form(...),
     viewGroup: Literal["front", "back"] = Form(...),
     image: UploadFile = File(...),
