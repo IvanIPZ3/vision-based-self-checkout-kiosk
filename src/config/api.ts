@@ -20,6 +20,6 @@ export const buildApiUrl = (path: string) => {
   }
 
   throw new Error(
-    'Для цього GitHub-hosting не налаштовано backend API. Запустіть проєкт локально або задайте VITE_API_BASE_URL для окремого сервера.',
+    'Для цього розгортання не налаштовано backend API. Запустіть проєкт локально або задайте VITE_API_BASE_URL для окремого сервера.',
   );
 };

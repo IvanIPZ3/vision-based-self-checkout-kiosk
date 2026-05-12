@@ -35,3 +35,5 @@ backend/data/*.db-*
 .run-*.cmd
 .frontend*.log
 .backend*.log
+frontend_release/
+frontend_release.zip
