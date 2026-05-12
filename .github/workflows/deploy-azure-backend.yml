@@ -7,6 +7,8 @@ on:
     paths:
       - 'backend/**'
       - 'requirements.txt'
+      - 'scripts/azure/appservice-startup.sh'
+      - 'scripts/azure/provision.ps1'
       - '.github/workflows/deploy-azure-backend.yml'
   workflow_dispatch:
 
@@ -37,17 +39,48 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir -p backend_release
-          cp requirements.txt backend_release/requirements.txt
-          cp -r backend backend_release/backend
+          cp backend/requirements.txt backend_release/requirements.txt
+          rsync -av \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc' \
+            --exclude 'data/*.db' \
+            --exclude 'data/*.db-*' \
+            backend/ backend_release/backend/
           sed -i 's/\r$//' backend_release/backend/startup.sh
           chmod +x backend_release/backend/startup.sh
           cd backend_release
           zip -r ../backend_release.zip .
 
+      - name: Prepare App Service startup script
+        run: |
+          cp scripts/azure/appservice-startup.sh appservice-startup.sh
+          sed -i 's/\r$//' appservice-startup.sh
+          chmod +x appservice-startup.sh
+
       - name: Azure login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure backend startup command
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp config set \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_BACKEND_APP_NAME }}" \
+              --startup-file "bash /home/site/startup.sh"
+
+      - name: Deploy App Service startup script
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp deploy \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_BACKEND_APP_NAME }}" \
+              --src-path appservice-startup.sh \
+              --type static \
+              --target-path /home/site/startup.sh
 
       - name: Deploy backend package
         uses: azure/cli@v2
@@ -58,3 +91,11 @@ jobs:
               --name "${{ vars.AZURE_BACKEND_APP_NAME }}" \
               --src-path backend_release.zip \
               --type zip
+
+      - name: Restart backend app
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp restart \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_BACKEND_APP_NAME }}"

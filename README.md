@@ -12,7 +12,7 @@ Browser-based self-checkout prototype for a diploma project about object identif
 
 - kiosk-style self-checkout UI in Ukrainian
 - webcam preview in the browser
-- frame capture on `Сканувати товари`
+- frame capture on `Skanuvaty tovary`
 - backend image processing with OpenCV ORB feature matching
 - object catalog and recognition history stored in SQLite
 - reference-image management for books and other objects
@@ -56,7 +56,7 @@ Backend health:
 
 1. The browser shows the webcam preview.
 2. The user places one object on the platform.
-3. The user clicks `Сканувати товари`.
+3. The user clicks `Skanuvaty tovary`.
 4. The frontend captures one frame.
 5. The frame is sent to the backend with `multipart/form-data`.
 6. The backend compares the frame against reference images with OpenCV ORB feature matching.
@@ -129,9 +129,16 @@ Azure-ready workflows included in the repo:
 These workflows expect:
 
 - GitHub secret `AZURE_STATIC_WEB_APPS_API_TOKEN`
-- GitHub secret `AZURE_BACKEND_PUBLISH_PROFILE`
+- GitHub secret `AZURE_CREDENTIALS`
 - GitHub variable `AZURE_BACKEND_APP_NAME`
+- GitHub variable `AZURE_RESOURCE_GROUP`
 - GitHub variable `VITE_API_BASE_URL`
+
+Backend deployments also update the Azure App Service startup script from:
+
+- `scripts/azure/appservice-startup.sh`
+
+The startup script extracts the built `output.tar.zst` package on App Service and launches the FastAPI backend from the extracted runtime.
 
 ### Azure Provisioning Script
 
@@ -148,8 +155,15 @@ What it does:
 - creates the backend App Service
 - creates the Static Web App
 - configures backend app settings, including CORS and admin password
+- sets the backend startup command to `bash /home/site/startup.sh`
+- uploads the App Service startup script
 - pulls the Azure deployment tokens
-- writes the GitHub secrets and variables needed for CI/CD
+- writes the Static Web Apps token and Azure app variables needed for CI/CD
+
+Important:
+
+- the backend GitHub Actions workflow also requires repository secret `AZURE_CREDENTIALS`
+- this secret is used by `azure/login` for automatic backend deployment on push
 
 ## GitHub Pages Hosting
 

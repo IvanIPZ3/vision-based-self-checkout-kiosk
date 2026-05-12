@@ -26,7 +26,7 @@ az webapp create `
     --resource-group $ResourceGroupName `
     --plan $AppServicePlanName `
     --runtime "PYTHON:3.12" `
-    --startup-file "bash backend/startup.sh" `
+    --startup-file "bash /home/site/startup.sh" `
     --https-only true | Out-Null
 
 $backendUrl = "https://$BackendAppName.azurewebsites.net"
@@ -60,15 +60,23 @@ az webapp config appsettings set `
 az webapp config set `
     --name $BackendAppName `
     --resource-group $ResourceGroupName `
-    --startup-file "bash backend/startup.sh" `
+    --startup-file "bash /home/site/startup.sh" `
     --always-on true | Out-Null
 
-Write-Host "Fetching deployment secrets..."
-$backendPublishProfile = az webapp deployment list-publishing-profiles `
-    --name $BackendAppName `
+Write-Host "Deploying App Service startup script..."
+$startupSource = Join-Path $PSScriptRoot "appservice-startup.sh"
+$startupTemp = Join-Path $PSScriptRoot "appservice-startup.linux.sh"
+$startupContent = Get-Content $startupSource -Raw
+$startupContent = $startupContent -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText($startupTemp, $startupContent, [System.Text.UTF8Encoding]::new($false))
+az webapp deploy `
     --resource-group $ResourceGroupName `
-    --xml
+    --name $BackendAppName `
+    --src-path $startupTemp `
+    --type static `
+    --target-path /home/site/startup.sh | Out-Null
 
+Write-Host "Fetching deployment secrets..."
 $staticWebAppToken = az staticwebapp secrets list `
     --name $FrontendAppName `
     --resource-group $ResourceGroupName `
@@ -76,13 +84,14 @@ $staticWebAppToken = az staticwebapp secrets list `
     --output tsv
 
 Write-Host "Updating GitHub secrets and variables..."
-$backendPublishProfile | gh secret set AZURE_BACKEND_PUBLISH_PROFILE --repo $Repository
 $staticWebAppToken | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --repo $Repository
 gh variable set AZURE_BACKEND_APP_NAME --body $BackendAppName --repo $Repository
+gh variable set AZURE_RESOURCE_GROUP --body $ResourceGroupName --repo $Repository
 gh variable set VITE_API_BASE_URL --body $backendUrl --repo $Repository
 
 Write-Host ""
 Write-Host "Azure provisioning is complete."
 Write-Host "Frontend URL: $frontendUrl"
 Write-Host "Backend URL:  $backendUrl"
-Write-Host "GitHub Actions secrets and variables have been configured."
+Write-Host "Static Web Apps token and Azure app variables have been configured."
+Write-Host "Ensure GitHub secret AZURE_CREDENTIALS is configured for backend CI/CD."
