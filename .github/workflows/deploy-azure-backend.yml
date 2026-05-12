@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE != '' && vars.AZURE_BACKEND_APP_NAME != '' }}
     runs-on: ubuntu-latest
 
     steps:
