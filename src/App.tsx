@@ -199,14 +199,14 @@ const App = () => {
 
       setLastPrediction(prediction);
 
-      if (!prediction.detected && prediction.uncertainItems.length > 0) {
+      if (predictionItems.length > 0) {
+        setRecognitionStatus('success');
+      } else if (!prediction.detected && prediction.uncertainItems.length > 0) {
         setRecognitionStatus('uncertain');
       } else if (!prediction.detected && isEmptyPlatformMessage(prediction.message)) {
         setRecognitionStatus('empty');
       } else if (!prediction.detected) {
         setRecognitionStatus('error');
-      } else if (prediction.unresolvedCount > 0) {
-        setRecognitionStatus('partial');
       } else {
         setRecognitionStatus('success');
       }

@@ -108,7 +108,7 @@ export const ScanScreen = ({
             ))}
           </div>
 
-          {hasUncertainItems && (
+          {recognitionStatus === 'partial' && hasUncertainItems && (
             <div className="rounded-2xl border border-kiosk-warning/50 bg-kiosk-warning/10 p-4">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-kiosk-warning">
                 Потребує уточнення
@@ -136,7 +136,7 @@ export const ScanScreen = ({
             </div>
           )}
 
-          {hasUnresolvedItems && (
+          {recognitionStatus === 'partial' && hasUnresolvedItems && (
             <div className="rounded-2xl border border-kiosk-warning/40 bg-kiosk-warning/8 px-4 py-4">
               <p className="text-base font-semibold text-kiosk-warning">{unresolvedMessage}</p>
             </div>
