@@ -9,6 +9,8 @@ from backend.app.core.reference_library_service import (
 )
 from backend.app.schemas.reference_library import (
     ReferenceCaptureResponse,
+    ReferenceObjectCreateRequest,
+    ReferenceObjectCreateResponse,
     ReferenceObjectItem,
     ReferenceObjectsResponse,
 )
@@ -23,6 +25,29 @@ async def list_reference_objects(_: None = Depends(verify_admin_password)) -> Re
             ReferenceObjectItem(**item)
             for item in reference_library_service.list_reference_objects()
         ]
+    )
+
+
+@router.post("/api/reference-library/objects", response_model=ReferenceObjectCreateResponse)
+async def create_reference_object(
+    payload: ReferenceObjectCreateRequest,
+    _: None = Depends(verify_admin_password),
+) -> ReferenceObjectCreateResponse:
+    try:
+        created_object = reference_library_service.create_reference_book(
+            name=payload.name,
+            price_minor=payload.priceMinor,
+            description=payload.description,
+        )
+    except ReferenceCaptureError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    return ReferenceObjectCreateResponse(
+        item=ReferenceObjectItem(**created_object),
+        message="Книгу додано до каталогу. Тепер можна одразу зберігати еталонні кадри.",
     )
 
 

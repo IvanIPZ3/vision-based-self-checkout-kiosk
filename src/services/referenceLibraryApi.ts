@@ -1,5 +1,10 @@
 import { buildApiUrl } from '../config/api';
-import type { ReferenceCaptureResponse, ReferenceObject } from '../types';
+import type {
+  ReferenceCaptureResponse,
+  ReferenceObject,
+  ReferenceObjectCreateInput,
+  ReferenceObjectCreateResponse,
+} from '../types';
 
 const objectsPath = '/api/reference-library/objects';
 const capturePath = '/api/reference-library/capture';
@@ -33,6 +38,26 @@ export const fetchReferenceObjects = async (adminPassword: string): Promise<Refe
 
   const payload = (await response.json()) as { items: ReferenceObject[] };
   return payload.items;
+};
+
+export const createReferenceObject = async (
+  adminPassword: string,
+  payload: ReferenceObjectCreateInput,
+): Promise<ReferenceObjectCreateResponse> => {
+  const response = await fetch(buildApiUrl(objectsPath), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [adminPasswordHeader]: adminPassword,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractApiError(response, 'Не вдалося додати книгу до каталогу.'));
+  }
+
+  return (await response.json()) as ReferenceObjectCreateResponse;
 };
 
 export const saveReferenceCapture = async (

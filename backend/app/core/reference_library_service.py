@@ -39,9 +39,44 @@ class ReferenceLibraryService:
                 "id": item.id,
                 "label": item.label,
                 "name": item.name,
+                "priceMinor": item.price_minor,
+                "price": item.price,
+                "description": item.description,
+                "catalogSource": item.catalog_source,
             }
             for item in objects_repository.list_active()
         ]
+
+    def create_reference_book(
+        self,
+        *,
+        name: str,
+        price_minor: int,
+        description: str | None,
+    ) -> dict[str, object]:
+        normalized_name = name.strip()
+        if len(normalized_name) < 2:
+            raise ReferenceCaptureError("Назва книги має містити щонайменше 2 символи.")
+
+        if price_minor < 0:
+            raise ReferenceCaptureError("Ціна книги не може бути від’ємною.")
+
+        normalized_description = description.strip() if isinstance(description, str) else None
+        object_record = objects_repository.create_admin_book(
+            name=normalized_name,
+            price_minor=price_minor,
+            description=normalized_description or None,
+        )
+
+        return {
+            "id": object_record.id,
+            "label": object_record.label,
+            "name": object_record.name,
+            "priceMinor": object_record.price_minor,
+            "price": object_record.price,
+            "description": object_record.description,
+            "catalogSource": object_record.catalog_source,
+        }
 
     def save_reference_capture(
         self,

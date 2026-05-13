@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS objects (
     name TEXT NOT NULL,
     price_minor INTEGER NOT NULL CHECK (price_minor >= 0),
     description TEXT,
+    catalog_source TEXT NOT NULL DEFAULT 'seed',
     is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL

@@ -52,6 +52,16 @@ export interface ReferenceObject {
   id: number;
   label: string;
   name: string;
+  priceMinor: number;
+  price: number;
+  description: string | null;
+  catalogSource: string;
+}
+
+export interface ReferenceObjectCreateInput {
+  name: string;
+  priceMinor: number;
+  description: string | null;
 }
 
 export interface ReferenceCaptureResponse {
@@ -64,5 +74,10 @@ export interface ReferenceCaptureResponse {
   height: number;
   imageFormat: string;
   syncActive: number;
+  message: string;
+}
+
+export interface ReferenceObjectCreateResponse {
+  item: ReferenceObject;
   message: string;
 }

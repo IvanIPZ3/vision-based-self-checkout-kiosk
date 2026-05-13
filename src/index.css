@@ -170,6 +170,11 @@
     @apply mt-3 min-h-[60px] w-full rounded-xl border border-slate-600 bg-slate-900 px-4 text-lg font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30;
   }
 
+  .field-textarea {
+    @apply mt-0 min-h-[120px] w-full rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-lg font-semibold text-slate-100 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30;
+    resize: vertical;
+  }
+
   .field-note {
     @apply mt-2 text-sm font-semibold text-slate-400;
   }

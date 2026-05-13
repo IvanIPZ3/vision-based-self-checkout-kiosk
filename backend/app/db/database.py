@@ -39,8 +39,24 @@ def init_database() -> None:
 
     with get_connection() as connection:
         connection.executescript(schema_sql)
+        _run_object_catalog_migration(connection)
         _seed_objects(connection)
         connection.commit()
+
+
+def _run_object_catalog_migration(connection: sqlite3.Connection) -> None:
+    object_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(objects)").fetchall()
+    }
+
+    if "catalog_source" not in object_columns:
+        connection.execute(
+            "ALTER TABLE objects ADD COLUMN catalog_source TEXT NOT NULL DEFAULT 'seed'"
+        )
+        connection.execute(
+            "UPDATE objects SET catalog_source = 'seed' WHERE catalog_source IS NULL OR catalog_source = ''"
+        )
 
 
 def _seed_objects(connection: sqlite3.Connection) -> None:
@@ -50,12 +66,13 @@ def _seed_objects(connection: sqlite3.Connection) -> None:
 
     connection.executemany(
         """
-        INSERT INTO objects (label, name, price_minor, description, is_active, created_at, updated_at)
-        VALUES (:label, :name, :price_minor, :description, 1, :created_at, :updated_at)
+        INSERT INTO objects (label, name, price_minor, description, catalog_source, is_active, created_at, updated_at)
+        VALUES (:label, :name, :price_minor, :description, 'seed', 1, :created_at, :updated_at)
         ON CONFLICT(label) DO UPDATE SET
             name = excluded.name,
             price_minor = excluded.price_minor,
             description = excluded.description,
+            catalog_source = 'seed',
             is_active = 1,
             updated_at = excluded.updated_at
         """,
@@ -75,11 +92,15 @@ def _seed_objects(connection: sqlite3.Connection) -> None:
     if labels:
         placeholders = ", ".join("?" for _ in labels)
         connection.execute(
-            f"UPDATE objects SET is_active = 0, updated_at = ? WHERE label NOT IN ({placeholders})",
+            f"""
+            UPDATE objects
+            SET is_active = 0, updated_at = ?
+            WHERE catalog_source = 'seed' AND label NOT IN ({placeholders})
+            """,
             (timestamp, *labels),
         )
     else:
         connection.execute(
-            "UPDATE objects SET is_active = 0, updated_at = ?",
+            "UPDATE objects SET is_active = 0, updated_at = ? WHERE catalog_source = 'seed'",
             (timestamp,),
         )
