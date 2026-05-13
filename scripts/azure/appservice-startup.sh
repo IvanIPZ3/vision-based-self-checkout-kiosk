@@ -10,7 +10,10 @@ log() {
   echo "[startup] $1"
 }
 
-if [[ -f "${PACKAGE_ARCHIVE}" ]]; then
+if [[ -f "${PACKAGE_ROOT}/backend/azure_entrypoint.py" ]]; then
+  log "Using unpacked runtime from ${PACKAGE_ROOT}"
+  APP_ROOT="${PACKAGE_ROOT}"
+elif [[ -f "${PACKAGE_ARCHIVE}" ]]; then
   log "Extracting runtime package from ${PACKAGE_ARCHIVE}"
   rm -rf "${RUNTIME_ROOT}"
   mkdir -p "${RUNTIME_ROOT}"
@@ -25,9 +28,6 @@ if [[ -f "${PACKAGE_ARCHIVE}" ]]; then
     exit 1
   fi
   APP_ROOT="$(dirname "$(dirname "${ENTRYPOINT_CANDIDATE}")")"
-elif [[ -f "${PACKAGE_ROOT}/backend/azure_entrypoint.py" ]]; then
-  log "Using unpacked runtime from ${PACKAGE_ROOT}"
-  APP_ROOT="${PACKAGE_ROOT}"
 else
   log "No runnable backend package found"
   ls -la "${PACKAGE_ROOT}" || true
