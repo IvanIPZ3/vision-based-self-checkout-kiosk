@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { MobilePaymentScreen } from './screens/MobilePaymentScreen';
+import { MobileScanScreen } from './screens/MobileScanScreen';
+import { MobileStaffHelpScreen } from './screens/MobileStaffHelpScreen';
+import { MobileSuccessScreen } from './screens/MobileSuccessScreen';
 import { PaymentScreen } from './screens/PaymentScreen';
 import { ReferenceCaptureScreen } from './screens/ReferenceCaptureScreen';
 import { ScanScreen } from './screens/ScanScreen';
@@ -21,6 +25,7 @@ import { captureVideoFrame } from './utils/captureVideoFrame';
 type NonHelpScreen = Exclude<Screen, 'staffHelp'>;
 
 const adminReferenceCapturePath = '/admin/reference-capture';
+const mobileCheckoutPath = '/mobile';
 
 const getClientRoute = () => {
   const hashRoute = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
@@ -32,10 +37,26 @@ const getClientRoute = () => {
     return adminReferenceCapturePath;
   }
 
+  if (window.location.pathname.endsWith(mobileCheckoutPath)) {
+    return mobileCheckoutPath;
+  }
+
   return '/';
 };
 
-const getScreenFromLocation = (): Screen => (getClientRoute() === adminReferenceCapturePath ? 'referenceCapture' : 'start');
+const getScreenFromLocation = (): Screen => {
+  const route = getClientRoute();
+
+  if (route === adminReferenceCapturePath) {
+    return 'referenceCapture';
+  }
+
+  if (route === mobileCheckoutPath) {
+    return 'scan';
+  }
+
+  return 'start';
+};
 
 const navigateTo = (path: string) => {
   const isGitHubPages = window.location.hostname.endsWith('github.io');
@@ -96,6 +117,7 @@ const App = () => {
     () => cartItems.reduce((accumulator, item) => accumulator + item.price * item.quantity, 0),
     [cartItems],
   );
+  const isMobileExperience = getClientRoute() === mobileCheckoutPath;
 
   useEffect(() => {
     return () => {
@@ -259,8 +281,9 @@ const App = () => {
   const handleFinishCheckout = () => {
     clearRecognitionTimers();
     clearTimeoutIfPresent(paymentTimeoutRef);
-    setCurrentScreen('start');
-    setReturnScreen('start');
+    const nextScreen: NonHelpScreen = isMobileExperience ? 'scan' : 'start';
+    setCurrentScreen(nextScreen);
+    setReturnScreen(nextScreen);
     setCartItems([]);
     setSelectedItemId(null);
     setRecognitionStatus('waiting');
@@ -271,7 +294,9 @@ const App = () => {
   };
 
   return (
-    <main className="h-screen w-screen overflow-y-auto overflow-x-hidden p-3 text-slate-100 lg:p-5">
+    <main
+      className={`${isMobileExperience ? 'min-h-screen w-screen overflow-y-auto overflow-x-hidden px-2 py-3 text-slate-100 sm:px-3' : 'h-screen w-screen overflow-y-auto overflow-x-hidden p-3 text-slate-100 lg:p-5'}`}
+    >
       {currentScreen === 'start' && (
         <StartScreen onStart={handleStartShopping} onRequestStaff={() => handleOpenStaffHelp('manual_request')} />
       )}
@@ -287,42 +312,83 @@ const App = () => {
       )}
 
       {currentScreen === 'scan' && (
-        <ScanScreen
-          recognitionStatus={recognitionStatus}
-          cartItems={cartItems}
-          selectedItemId={selectedItemId}
-          total={totalAmount}
-          lastPrediction={lastPrediction}
-          cameraVideoRef={cameraVideoRef}
-          onSelectItem={setSelectedItemId}
-          onDeleteSelected={handleDeleteSelectedItem}
-          onClearCart={handleClearCart}
-          onCheckout={handleProceedToPayment}
-          onRequestStaff={handleOpenStaffHelp}
-          onStartScan={handleStartScan}
-        />
+        isMobileExperience ? (
+          <MobileScanScreen
+            recognitionStatus={recognitionStatus}
+            cartItems={cartItems}
+            selectedItemId={selectedItemId}
+            total={totalAmount}
+            lastPrediction={lastPrediction}
+            cameraVideoRef={cameraVideoRef}
+            onSelectItem={setSelectedItemId}
+            onDeleteSelected={handleDeleteSelectedItem}
+            onClearCart={handleClearCart}
+            onCheckout={handleProceedToPayment}
+            onRequestStaff={handleOpenStaffHelp}
+            onStartScan={handleStartScan}
+          />
+        ) : (
+          <ScanScreen
+            recognitionStatus={recognitionStatus}
+            cartItems={cartItems}
+            selectedItemId={selectedItemId}
+            total={totalAmount}
+            lastPrediction={lastPrediction}
+            cameraVideoRef={cameraVideoRef}
+            onSelectItem={setSelectedItemId}
+            onDeleteSelected={handleDeleteSelectedItem}
+            onClearCart={handleClearCart}
+            onCheckout={handleProceedToPayment}
+            onRequestStaff={handleOpenStaffHelp}
+            onStartScan={handleStartScan}
+          />
+        )
       )}
 
       {currentScreen === 'payment' && (
-        <PaymentScreen
-          total={totalAmount}
-          paymentStatus={paymentStatus}
-          onPayByCard={handlePayByCard}
-          onBackToCart={() => setCurrentScreen('scan')}
-          onRequestStaff={() => handleOpenStaffHelp('payment_problem')}
-        />
+        isMobileExperience ? (
+          <MobilePaymentScreen
+            total={totalAmount}
+            paymentStatus={paymentStatus}
+            onPayByCard={handlePayByCard}
+            onBackToCart={() => setCurrentScreen('scan')}
+            onRequestStaff={() => handleOpenStaffHelp('payment_problem')}
+          />
+        ) : (
+          <PaymentScreen
+            total={totalAmount}
+            paymentStatus={paymentStatus}
+            onPayByCard={handlePayByCard}
+            onBackToCart={() => setCurrentScreen('scan')}
+            onRequestStaff={() => handleOpenStaffHelp('payment_problem')}
+          />
+        )
       )}
 
       {currentScreen === 'paymentSuccess' && (
-        <SuccessScreen
-          total={totalAmount}
-          receiptChoice={receiptChoice}
-          onReceiptChoice={setReceiptChoice}
-          onFinish={handleFinishCheckout}
-        />
+        isMobileExperience ? (
+          <MobileSuccessScreen
+            total={totalAmount}
+            receiptChoice={receiptChoice}
+            onReceiptChoice={setReceiptChoice}
+            onFinish={handleFinishCheckout}
+          />
+        ) : (
+          <SuccessScreen
+            total={totalAmount}
+            receiptChoice={receiptChoice}
+            onReceiptChoice={setReceiptChoice}
+            onFinish={handleFinishCheckout}
+          />
+        )
       )}
 
-      {currentScreen === 'staffHelp' && <StaffHelpScreen reason={staffHelpReason} onBack={handleBackFromStaffHelp} />}
+      {currentScreen === 'staffHelp' &&
+        (isMobileExperience ? (
+          <MobileStaffHelpScreen reason={staffHelpReason} onBack={handleBackFromStaffHelp} />
+        ) : (
+          <StaffHelpScreen reason={staffHelpReason} onBack={handleBackFromStaffHelp} />
+        ))}
     </main>
   );
 };

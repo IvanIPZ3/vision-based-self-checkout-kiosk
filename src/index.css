@@ -206,6 +206,43 @@
   .status-pulse {
     animation: statusPulse 1.8s ease-in-out infinite;
   }
+
+  .mobile-page {
+    @apply mx-auto flex w-full max-w-md flex-col gap-4 pb-28;
+  }
+
+  .mobile-card {
+    @apply rounded-[1.75rem] border border-slate-700/70 bg-kiosk-panel/90 shadow-panel backdrop-blur;
+  }
+
+  .mobile-camera-shell {
+    aspect-ratio: 3 / 4.2;
+  }
+
+  .mobile-result-card {
+    @apply grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/70 px-4 py-3;
+  }
+
+  .mobile-cart-item {
+    @apply grid w-full grid-cols-[1fr_auto] items-start gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-left transition hover:border-slate-500 hover:bg-slate-800;
+  }
+
+  .mobile-cart-item-selected {
+    @apply border-kiosk-accent bg-kiosk-accent/15 shadow-[0_0_0_2px_rgba(45,226,199,0.18)];
+  }
+
+  .mobile-tip-row {
+    @apply grid grid-cols-[auto_1fr] items-start gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/65 px-3 py-2.5;
+  }
+
+  .mobile-tip-index {
+    @apply flex h-7 w-7 items-center justify-center rounded-full border border-sky-400/40 bg-sky-500/10 text-xs font-bold text-sky-200;
+  }
+
+  .mobile-sticky-summary {
+    @apply fixed left-1/2 z-30 flex w-[calc(100%-1rem)] max-w-md -translate-x-1/2 items-center justify-between gap-3 rounded-[1.4rem] border border-slate-700/80 bg-slate-950/95 px-4 py-3 shadow-panel backdrop-blur;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
 
 @keyframes scanMove {
